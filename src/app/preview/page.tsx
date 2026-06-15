@@ -19,8 +19,11 @@ import { PriorityBadge, DueDateBadge } from '@/client/components/ui/Badge';
 import { Modal } from '@/client/components/ui/Modal';
 import { ConfirmDialog } from '@/client/components/ui/ConfirmDialog';
 import { TicketCard } from '@/client/components/ticket/TicketCard';
+import { TicketForm } from '@/client/components/ticket/TicketForm';
+import { TicketModal } from '@/client/components/ticket/TicketModal';
 import { Board } from '@/client/components/board/Board';
 import { mockTickets, mockBoard } from '@/client/mocks/tickets';
+import type { TicketWithMeta } from '@/shared/types';
 
 /** 개별 컴포넌트 1개를 라벨과 함께 보여주는 칸 */
 function Specimen({
@@ -93,6 +96,16 @@ export default function PreviewPage() {
   const [isConfirmOpen, setConfirmOpen] = useState(false);
   const [confirmResult, setConfirmResult] = useState<string>('—');
   const [clickedTitle, setClickedTitle] = useState<string>('—');
+
+  // Phase 3 — 티켓 생성 폼 모달
+  const [isCreateOpen, setCreateOpen] = useState(false);
+  const [createResult, setCreateResult] = useState<string>('—');
+
+  // Phase 3 — 카드 클릭 시 여는 상세/수정 모달
+  const [selectedTicket, setSelectedTicket] = useState<TicketWithMeta | null>(
+    null,
+  );
+  const [modalAction, setModalAction] = useState<string>('—');
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8">
@@ -210,6 +223,29 @@ export default function PreviewPage() {
             마지막 클릭: {clickedTitle}
           </span>
         </Specimen>
+
+        <Specimen
+          title="TicketForm (생성)"
+          description='"티켓 생성" 버튼 → Modal + TicketForm(mode="create")'
+        >
+          <Button onClick={() => setCreateOpen(true)}>티켓 생성</Button>
+          <span className="text-xs text-[var(--color-muted)]">
+            마지막 제출: {createResult}
+          </span>
+          <Modal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)}>
+            <div className="p-6">
+              <h3 className="mb-4 text-lg font-bold">새 티켓 생성</h3>
+              <TicketForm
+                mode="create"
+                onSubmit={(data) => {
+                  setCreateResult(JSON.stringify(data));
+                  setCreateOpen(false);
+                }}
+                onCancel={() => setCreateOpen(false)}
+              />
+            </div>
+          </Modal>
+        </Specimen>
       </GallerySection>
 
       {/* Phase 3 — 섹션 */}
@@ -227,10 +263,14 @@ export default function PreviewPage() {
           <div className="w-full">
             <Board
               board={mockBoard}
-              onTicketClick={(t) => setClickedTitle(t.title)}
+              onTicketClick={(t) => {
+                setClickedTitle(t.title);
+                setSelectedTicket(t);
+              }}
             />
             <p className="mt-3 text-xs text-[var(--color-muted)]">
-              마지막 클릭: {clickedTitle}
+              카드를 클릭하면 상세/수정 모달(TicketModal)이 열립니다. 마지막 동작:{' '}
+              {modalAction}
             </p>
           </div>
         </Specimen>
@@ -240,6 +280,23 @@ export default function PreviewPage() {
       <GallerySection phase="Phase 5" title="오케스트레이션 (Orchestration)">
         {/* TODO Phase 5 */}
       </GallerySection>
+
+      {/* 카드 클릭으로 열리는 상세/수정 모달 (TicketModal) */}
+      {selectedTicket && (
+        <TicketModal
+          ticket={selectedTicket}
+          isOpen
+          onClose={() => setSelectedTicket(null)}
+          onUpdate={(id, data) => {
+            setModalAction(`수정 #${id}: ${JSON.stringify(data)}`);
+            setSelectedTicket(null);
+          }}
+          onDelete={(id) => {
+            setModalAction(`삭제 #${id}`);
+            setSelectedTicket(null);
+          }}
+        />
+      )}
     </main>
   );
 }

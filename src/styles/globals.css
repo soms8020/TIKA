@@ -388,6 +388,44 @@ body {
   @apply mt-1 text-xs;
   color: var(--color-danger);
 }
+.field-textarea {
+  @apply w-full rounded-md px-3 py-2 text-sm;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  resize: vertical;
+  min-height: 4.5rem;
+}
+.field-textarea:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
+
+/* 티켓 읽기 전용 상세 (COMPONENT_SPEC §2.7 TicketDetailView) */
+.detail-view {
+  @apply mb-4 rounded-md p-3;
+  background-color: var(--color-column-bg);
+}
+.detail-row {
+  @apply flex items-center justify-between py-1 text-sm;
+}
+.detail-label {
+  @apply font-medium;
+  color: var(--color-muted);
+}
+.detail-value {
+  @apply text-right;
+}
+
+/* 티켓 생성/수정 폼 (COMPONENT_SPEC §2.8) */
+.ticket-form {
+  @apply flex flex-col;
+}
+.ticket-form .field {
+  @apply mb-4;
+}
+.form-actions {
+  @apply flex justify-end gap-2 mt-2;
+}
 
 /* ===================== 스크롤바 (칼럼) ===================== */
 .column__list::-webkit-scrollbar {

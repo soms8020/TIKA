@@ -2,6 +2,35 @@
 
 이 파일은 `/changelog` 스킬로 자동 기록된다. 최신 항목이 위에 온다.
 
+## [main] - 2026-06-15 17:02
+
+### Prompt
+> "TicketFrom 컴포넌트의 테스트를 작성해줘. 아직 구현하지는 마. TC-COMP-004 기반: ... createTicketSchema를 폼 검증에 사용해."
+> "TicketFrom 테스트를 통과하는 구현을 만들어줘. createTicketSchema로 클라이언트 사이드 검증, form-field 등 globals.css 클래스 활용, Phase 1 Button 재사용."
+> "Phase 3 나머지를 TDD로 구현해줘. TicketDetailView(3 tests), TicketModal(7 tests). 삭제시 2단계 확인(삭제버튼 → ConfirmDialog → 확인)."
+> "Phase 3 컴포넌트를 프리뷰 페이지에 추가해줘. 1. 티켓 생성 버튼 → Modal+TicketForm(create), 2. 카드 클릭 → TicketModal. 실행해줘."
+
+### Changes
+- **Added**: 티켓 생성/수정 폼 — createTicketSchema 클라이언트 검증, 인라인 에러, Button 재사용 (`src/client/components/ticket/TicketForm.tsx`)
+- **Added**: 읽기 전용 상세 뷰 — 상태/시작일/종료일/생성일 표시, null은 "-" (`src/client/components/ticket/TicketDetailView.tsx`)
+- **Added**: 티켓 상세/수정/삭제 모달 — Modal+DetailView+Form+ConfirmDialog 조합, 2단계 삭제 확인 (`src/client/components/ticket/TicketModal.tsx`)
+- **Added**: 위 3개 컴포넌트의 TDD 테스트 (TC-COMP-004/005) (`__test__/client/components/ticket/TicketForm.test.tsx`, `TicketDetailView.test.tsx`, `TicketModal.test.tsx`)
+- **Modified**: 폼/상세 스타일 클래스(.ticket-form/.field*/.detail-*) 추가 (`src/styles/globals.css`)
+- **Modified**: 프리뷰에 TicketForm(생성) 모달 + 카드 클릭 시 TicketModal 연동 (`src/app/preview/page.tsx`)
+
+### Files Modified
+- `src/app/preview/page.tsx` (+59, -2 lines)
+- `src/styles/globals.css` (+38, -0 lines)
+- `__test__/client/components/ticket/TicketDetailView.test.tsx` (+76, -0 lines)
+- `__test__/client/components/ticket/TicketForm.test.tsx` (+165, -0 lines)
+- `__test__/client/components/ticket/TicketModal.test.tsx` (+128, -0 lines)
+- `src/client/components/ticket/TicketDetailView.tsx` (+42, -0 lines)
+- `src/client/components/ticket/TicketForm.tsx` (+170, -0 lines)
+- `src/client/components/ticket/TicketModal.tsx` (+78, -0 lines)
+
+### Tests
+- npm test: 140 passed / 0 failed (18 test suites)
+
 ## [main] - 2026-06-15 16:36
 
 ### Prompt

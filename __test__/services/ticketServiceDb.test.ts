@@ -168,30 +168,47 @@ describe('getBoard (TC-API-002)', () => {
 describe('reorderTicket (TC-API-007)', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  // 트랜잭션 콜백에 넘길 tx 모킹. update().set(v)의 v를 캡처한다.
-  function setupTx(existing: ReturnType<typeof row> | null) {
-    let captured: Record<string, unknown> = {};
+  type Row = ReturnType<typeof row>;
+
+  /**
+   * tx 모킹. reorder의 호출 흐름:
+   *  select#1(existing) → update(moved) → select#2(column).orderBy → [update(reindex)…] → select#3(final)
+   * update().set(v)의 v들을 captured 배열에 순서대로 담는다.
+   */
+  function setupTx(opts: { existing: Row | null; column?: Row[]; final?: Row }) {
+    const captured: Record<string, unknown>[] = [];
+    let whereCall = 0;
     const tx = {
       select: () => ({
         from: () => ({
-          where: () => Promise.resolve(existing ? [existing] : []),
+          where: () => {
+            whereCall += 1;
+            const call = whereCall;
+            const value =
+              call === 1
+                ? opts.existing
+                  ? [opts.existing]
+                  : []
+                : [opts.final ?? opts.existing];
+            const p = Promise.resolve(value) as Promise<unknown> & {
+              orderBy: () => Promise<Row[]>;
+            };
+            p.orderBy = () => Promise.resolve(opts.column ?? []);
+            return p;
+          },
         }),
       }),
       update: () => ({
         set: (v: Record<string, unknown>) => {
-          captured = v;
-          return {
-            where: () => ({
-              returning: () => Promise.resolve([{ ...existing, ...v }]),
-            }),
-          };
+          captured.push(v);
+          return { where: () => Promise.resolve(undefined) };
         },
       }),
     };
     mockedDb.transaction.mockImplementation(
       async (cb: (t: typeof tx) => unknown) => cb(tx)
     );
-    return () => captured;
+    return captured;
   }
 
   const input = (o: Partial<ReorderTicketInput>): ReorderTicketInput => ({
@@ -202,37 +219,74 @@ describe('reorderTicket (TC-API-007)', () => {
   });
 
   it('007-11 존재하지 않는 티켓이면 null', async () => {
-    setupTx(null);
+    setupTx({ existing: null });
     const result = await reorderTicket(input({}));
     expect(result).toBeNull();
   });
 
   it('007-3 TODO로 이동 시 startedAt을 설정한다', async () => {
-    const getCaptured = setupTx(row({ status: 'BACKLOG' }));
+    const moved = row({ id: 1, status: 'TODO', position: 100 });
+    const captured = setupTx({
+      existing: row({ id: 1, status: 'BACKLOG' }),
+      column: [moved],
+      final: moved,
+    });
     await reorderTicket(input({ status: 'TODO' }));
-    expect(getCaptured().startedAt).toBeInstanceOf(Date);
+    expect(captured[0].startedAt).toBeInstanceOf(Date);
   });
 
   it('007-4 TODO→BACKLOG 이동 시 startedAt을 null로 초기화한다', async () => {
-    const getCaptured = setupTx(row({ status: 'TODO', startedAt: new Date() }));
+    const moved = row({ id: 1, status: 'BACKLOG', position: 100 });
+    const captured = setupTx({
+      existing: row({ id: 1, status: 'TODO', startedAt: new Date() }),
+      column: [moved],
+      final: moved,
+    });
     await reorderTicket(input({ status: 'BACKLOG' }));
-    expect(getCaptured().startedAt).toBeNull();
+    expect(captured[0].startedAt).toBeNull();
   });
 
   it('007-5 DONE에서 나가면 completedAt을 null로 초기화한다', async () => {
-    const getCaptured = setupTx(
-      row({ status: 'DONE', completedAt: new Date() })
-    );
+    const moved = row({ id: 1, status: 'TODO', position: 100 });
+    const captured = setupTx({
+      existing: row({ id: 1, status: 'DONE', completedAt: new Date() }),
+      column: [moved],
+      final: moved,
+    });
     await reorderTicket(input({ status: 'TODO' }));
-    expect(getCaptured().completedAt).toBeNull();
-    expect(getCaptured().startedAt).toBeInstanceOf(Date);
+    expect(captured[0].completedAt).toBeNull();
+    expect(captured[0].startedAt).toBeInstanceOf(Date);
   });
 
-  it('status와 position을 반영하고 affected 배열을 반환한다', async () => {
-    setupTx(row({ status: 'BACKLOG' }));
+  it('007-2 충돌이 없으면 affected는 빈 배열이다', async () => {
+    const moved = row({ id: 1, status: 'IN_PROGRESS', position: 512 });
+    setupTx({
+      existing: row({ id: 1, status: 'BACKLOG' }),
+      column: [moved, row({ id: 2, status: 'IN_PROGRESS', position: 2048 })],
+      final: moved,
+    });
     const result = await reorderTicket(input({ status: 'IN_PROGRESS', position: 512 }));
     expect(result?.ticket.status).toBe('IN_PROGRESS');
     expect(result?.ticket.position).toBe(512);
-    expect(Array.isArray(result?.affected)).toBe(true);
+    expect(result?.affected).toEqual([]);
+  });
+
+  it('007-8 position 충돌 시 칼럼을 1024 간격으로 재정렬하고 affected를 반환한다', async () => {
+    // 이동 티켓(id1)과 기존 티켓(id2)이 같은 position(100) → 충돌
+    const movedFinal = row({ id: 1, status: 'TODO', position: 0 });
+    const captured = setupTx({
+      existing: row({ id: 1, status: 'BACKLOG' }),
+      column: [
+        row({ id: 1, status: 'TODO', position: 100 }),
+        row({ id: 2, status: 'TODO', position: 100 }),
+      ],
+      final: movedFinal,
+    });
+    const result = await reorderTicket(input({ status: 'TODO', position: 100 }));
+
+    // 이동 티켓은 동률에서 앞에 와 position 0, 기존 티켓은 1024로 재배치
+    expect(result?.affected).toEqual([{ id: 2, position: 1024 }]);
+    // captured: [moved 초기 update, moved 재정렬(0), id2 재정렬(1024)]
+    expect(captured.length).toBe(3);
   });
 });

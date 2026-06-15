@@ -181,8 +181,10 @@ export interface ReorderResult {
   affected: { id: number; position: number }[];
 }
 
+const POSITION_GAP = 1024; // 재정렬 간격 (DATA_MODEL §5.5)
+
 // PATCH /api/tickets/reorder — 상태/순서 변경 (API_SPEC §7). 없으면 null
-// 트랜잭션으로 처리하며, startedAt/completedAt 비즈니스 규칙을 적용한다.
+// 트랜잭션으로 처리하며, startedAt/completedAt 규칙과 칼럼 재정렬을 적용한다.
 export async function reorderTicket(
   input: ReorderTicketInput
 ): Promise<ReorderResult | null> {
@@ -215,12 +217,48 @@ export async function reorderTicket(
       updates.completedAt = null;
     }
 
-    const [row] = await tx
-      .update(tickets)
-      .set(updates)
-      .where(eq(tickets.id, input.ticketId))
-      .returning();
+    // 1) 대상 티켓을 요청 status/position으로 이동
+    await tx.update(tickets).set(updates).where(eq(tickets.id, input.ticketId));
 
-    return { ticket: toTicket(row), affected: [] };
+    // 2) 대상 칼럼을 position 오름차순으로 조회 (동률은 이동 티켓을 앞에 배치)
+    const colRows = await tx
+      .select()
+      .from(tickets)
+      .where(eq(tickets.status, input.status))
+      .orderBy(asc(tickets.position));
+    const column = colRows.map(toTicket).sort((a, b) => {
+      if (a.position !== b.position) return a.position - b.position;
+      if (a.id === input.ticketId) return -1;
+      if (b.id === input.ticketId) return 1;
+      return a.id - b.id;
+    });
+
+    // 3) 인접 간격이 1 미만(충돌)이면 칼럼 전체를 1024 간격으로 재정렬
+    const needsReindex = column.some(
+      (t, i) => i > 0 && t.position - column[i - 1].position < 1
+    );
+
+    const affected: { id: number; position: number }[] = [];
+    if (needsReindex) {
+      for (let i = 0; i < column.length; i++) {
+        const newPos = i * POSITION_GAP;
+        if (column[i].position === newPos) continue;
+        await tx
+          .update(tickets)
+          .set({ position: newPos })
+          .where(eq(tickets.id, column[i].id));
+        if (column[i].id !== input.ticketId) {
+          affected.push({ id: column[i].id, position: newPos });
+        }
+      }
+    }
+
+    // 4) 최종 대상 티켓 재조회 (재정렬 반영)
+    const finalRows = await tx
+      .select()
+      .from(tickets)
+      .where(eq(tickets.id, input.ticketId));
+
+    return { ticket: toTicket(finalRows[0]), affected };
   });
 }

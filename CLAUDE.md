@@ -123,6 +123,7 @@ src/shared/에서 타입과 검증 스키마를 공유한다.
 
 ## 최근 변경사항 (최근 14일)
 <!-- RECENT_CHANGES_START -->
+- **2026-06-15** [main] 보드 UI(002-board-ui) 명세 + 칸반/공통 UI 컴포넌트 및 테스트 + 미리보기 페이지 추가 (28 files, +3320/-5)
 - **2026-06-15** [main] /changelog 스킬 + 변경 이력 자동 기록 시스템 추가, tsbuildinfo 무시 (6 files, +~290/-1)
 <!-- RECENT_CHANGES_END -->
 

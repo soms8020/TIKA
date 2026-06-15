@@ -7,7 +7,7 @@ export default {
   },
   testPathIgnorePatterns: ["/node_modules/", "/.next/"],
   transform: {
-    "^.+\\.(ts|tsx)$": ["ts-jest", { tsconfig: "tsconfig.json" }]
+    "^.+\\.(ts|tsx)$": ["ts-jest", { tsconfig: "tsconfig.jest.json" }]
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json"]
 };

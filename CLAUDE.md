@@ -121,6 +121,11 @@ src/shared/에서 타입과 검증 스키마를 공유한다.
 - 테스트와 구현을 한 번에 작성하지 말 것 — 반드시 단계별로 진행
 - 테스트 실패 시 구현을 수정할 것, 테스트를 수정하지 말 것 (명세 오류인 경우 명세 먼저 수정)
 
+## 최근 변경사항 (최근 14일)
+<!-- RECENT_CHANGES_START -->
+- **2026-06-15** [main] /changelog 스킬 + 변경 이력 자동 기록 시스템 추가, tsbuildinfo 무시 (6 files, +~290/-1)
+<!-- RECENT_CHANGES_END -->
+
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:

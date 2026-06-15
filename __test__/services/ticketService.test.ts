@@ -1,5 +1,10 @@
 /**
  * @jest-environment node
+ *
+ * TC-API-001 (서비스 계층): 티켓 생성의 비즈니스 로직 검증.
+ * - 001-1  기본값(status=BACKLOG, priority=MEDIUM)
+ * - 001-10 position 자동 할당 (연속 생성 시 나중 티켓이 더 위 = 더 작은 position)
+ * - 001-11 startedAt/completedAt 초기값 null
  */
 import { createTicket } from '@/server/services/ticketService';
 import { db } from '@/server/db';
@@ -50,35 +55,52 @@ function mockInsertReturningEcho(): void {
   });
 }
 
-describe('ticketService.createTicket', () => {
+describe('ticketService.createTicket (TC-API-001)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockInsertReturningEcho();
   });
 
-  it('빈 Backlog 칼럼이면 position을 0으로 설정한다', async () => {
+  it('001-1 우선순위 미입력 시 MEDIUM, status는 항상 BACKLOG', async () => {
+    mockMinPosition(null);
+    const ticket = await createTicket({ title: '테스트 할일' });
+    expect(ticket.status).toBe('BACKLOG');
+    expect(ticket.priority).toBe('MEDIUM');
+  });
+
+  it('001-1 우선순위를 입력하면 그대로 반영한다', async () => {
+    mockMinPosition(null);
+    const ticket = await createTicket({ title: '제목', priority: 'HIGH' });
+    expect(ticket.priority).toBe('HIGH');
+  });
+
+  it('001-10 빈 Backlog 칼럼이면 position을 0으로 설정한다', async () => {
     mockMinPosition(null);
     const ticket = await createTicket({ title: '첫 티켓' });
     expect(ticket.position).toBe(0);
   });
 
-  it('기존 티켓이 있으면 position을 min - 1024로 설정한다', async () => {
+  it('001-10 기존 티켓이 있으면 position을 min - 1024로 설정한다', async () => {
     mockMinPosition(0);
     const ticket = await createTicket({ title: '두번째 티켓' });
     expect(ticket.position).toBe(-1024);
   });
 
-  it('우선순위를 입력하지 않으면 MEDIUM을 적용한다', async () => {
+  it('001-10 연속 2개 생성 시 나중 티켓의 position이 더 작다(맨 위 배치)', async () => {
+    // 첫 생성: 빈 칼럼 → position 0
     mockMinPosition(null);
-    const ticket = await createTicket({ title: '제목' });
-    expect(ticket.priority).toBe('MEDIUM');
+    const first = await createTicket({ title: '첫 티켓' });
+
+    // 두번째 생성: 현재 최소값(0) 기준 → position -1024
+    mockMinPosition(first.position);
+    const second = await createTicket({ title: '두번째 티켓' });
+
+    expect(second.position).toBeLessThan(first.position);
   });
 
-  it('상태는 항상 BACKLOG이며 startedAt/completedAt은 null이다', async () => {
+  it('001-11 생성 직후 startedAt/completedAt은 null이다', async () => {
     mockMinPosition(null);
-    const ticket = await createTicket({ title: '제목', priority: 'HIGH' });
-    expect(ticket.status).toBe('BACKLOG');
-    expect(ticket.priority).toBe('HIGH');
+    const ticket = await createTicket({ title: '제목' });
     expect(ticket.startedAt).toBeNull();
     expect(ticket.completedAt).toBeNull();
   });

@@ -88,6 +88,81 @@ describe('getBoard (TC-API-002)', () => {
     expect(board.DONE[0].id).toBe(1);
     expect(total).toBe(1);
   });
+
+  it('002-3 칼럼 내 position 오름차순 정렬을 유지한다', async () => {
+    mockedDb.select.mockReturnValue({
+      from: () => ({
+        orderBy: () =>
+          Promise.resolve([
+            row({ id: 10, status: 'BACKLOG', position: 0 }),
+            row({ id: 11, status: 'BACKLOG', position: 1024 }),
+            row({ id: 12, status: 'BACKLOG', position: 2048 }),
+          ]),
+      }),
+    });
+    const { board } = await getBoard();
+    expect(board.BACKLOG.map((t) => t.position)).toEqual([0, 1024, 2048]);
+    expect(board.BACKLOG.map((t) => t.id)).toEqual([10, 11, 12]);
+  });
+
+  it('002-4 total은 표시되는 전체 티켓 수와 같다(필터된 Done 제외)', async () => {
+    mockedDb.select.mockReturnValue({
+      from: () => ({
+        orderBy: () =>
+          Promise.resolve([
+            row({ id: 1, status: 'BACKLOG' }),
+            row({ id: 2, status: 'TODO' }),
+            row({ id: 3, status: 'DONE', completedAt: new Date(Date.now() - 1000) }),
+            row({ id: 4, status: 'DONE', completedAt: new Date(Date.now() - 90000000) }),
+          ]),
+      }),
+    });
+    const { board, total } = await getBoard();
+    const displayed =
+      board.BACKLOG.length +
+      board.TODO.length +
+      board.IN_PROGRESS.length +
+      board.DONE.length;
+    expect(total).toBe(displayed);
+    expect(total).toBe(3); // 24시간 초과 Done 1건 제외
+  });
+
+  it('002-7 각 티켓에 isOverdue(boolean)가 포함되고 과거 dueDate는 true', async () => {
+    const past = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    mockedDb.select.mockReturnValue({
+      from: () => ({
+        orderBy: () =>
+          Promise.resolve([row({ id: 1, status: 'TODO', dueDate: past })]),
+      }),
+    });
+    const { board } = await getBoard();
+    expect(typeof board.TODO[0].isOverdue).toBe('boolean');
+    expect(board.TODO[0].isOverdue).toBe(true);
+  });
+
+  it('002-8 모든 날짜 필드를 포함한다', async () => {
+    mockedDb.select.mockReturnValue({
+      from: () => ({
+        orderBy: () =>
+          Promise.resolve([
+            row({
+              id: 1,
+              status: 'TODO',
+              plannedStartDate: '2026-02-03',
+              dueDate: '2999-12-31',
+              startedAt: new Date(),
+              completedAt: null,
+            }),
+          ]),
+      }),
+    });
+    const { board } = await getBoard();
+    const t = board.TODO[0];
+    expect(t).toHaveProperty('plannedStartDate');
+    expect(t).toHaveProperty('dueDate');
+    expect(t).toHaveProperty('startedAt');
+    expect(t).toHaveProperty('completedAt');
+  });
 });
 
 describe('reorderTicket (TC-API-007)', () => {

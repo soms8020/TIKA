@@ -111,6 +111,18 @@ describe('PATCH /api/tickets/:id (TC-API-004)', () => {
     );
     expect(mocked.updateTicket).not.toHaveBeenCalled();
   });
+
+  it('004-9 status 등 허용되지 않은 필드는 스키마에서 제거되어 서비스로 전달되지 않는다', async () => {
+    mocked.updateTicket.mockResolvedValue({ ...withMeta, title: '제목' });
+    await patchByIdRoute(
+      jsonReq({ title: '제목', status: 'DONE', position: 999 }),
+      params('1')
+    );
+    const arg = mocked.updateTicket.mock.calls[0][1];
+    expect(arg).not.toHaveProperty('status');
+    expect(arg).not.toHaveProperty('position');
+    expect(arg).toEqual({ title: '제목' });
+  });
 });
 
 describe('DELETE /api/tickets/:id (TC-API-006)', () => {

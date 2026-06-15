@@ -1,9 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createTicketSchema } from '@/shared/validations/ticket';
-import { createTicket } from '@/server/services/ticketService';
+import { createTicket, getBoard } from '@/server/services/ticketService';
 import { errorResponse, ErrorCode } from '@/server/http/errors';
 
-// POST /api/tickets — 새 티켓 생성 (docs/API_SPEC.md §1)
+// GET /api/tickets — 전체 보드 조회 (API_SPEC §2)
+export async function GET() {
+  try {
+    const board = await getBoard();
+    return NextResponse.json(board, { status: 200 });
+  } catch {
+    return errorResponse(500, ErrorCode.INTERNAL_ERROR, '서버 내부 오류');
+  }
+}
+
+// POST /api/tickets — 새 티켓 생성 (API_SPEC §1)
 export async function POST(req: Request) {
   let body: unknown;
   try {

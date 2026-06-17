@@ -18,6 +18,10 @@ jest.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   DragOverlay: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useDroppable: () => ({ setNodeRef: jest.fn(), isOver: false }),
+  // 센서 API (Board 가 useSensors/useSensor/PointerSensor 사용)
+  useSensors: () => [],
+  useSensor: () => ({}),
+  PointerSensor: function PointerSensor() {},
 }));
 jest.mock('@dnd-kit/sortable', () => ({
   useSortable: () => ({

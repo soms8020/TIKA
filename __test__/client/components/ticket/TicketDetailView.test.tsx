@@ -72,4 +72,22 @@ describe('TicketDetailView (TC-COMP-005 읽기 전용)', () => {
       COLUMN_LABELS[TICKET_STATUS.DONE],
     );
   });
+
+  // 4) API JSON 직렬화 형태(ISO 문자열) 날짜도 YYYY-MM-DD 로 표시한다
+  //    (getBoard 응답은 Date 가 아니라 ISO 문자열로 들어온다)
+  it('ISO 문자열 날짜도 YYYY-MM-DD 로 표시한다', () => {
+    render(
+      <TicketDetailView
+        ticket={makeTicket({
+          startedAt: '2026-06-12T09:00:00.000Z' as unknown as Date,
+          completedAt: '2026-06-13T10:30:00.000Z' as unknown as Date,
+          createdAt: '2026-06-01T00:00:00.000Z' as unknown as Date,
+        })}
+      />,
+    );
+
+    expect(screen.getByTestId('detail-started-at')).toHaveTextContent('2026-06-12');
+    expect(screen.getByTestId('detail-completed-at')).toHaveTextContent('2026-06-13');
+    expect(screen.getByTestId('detail-created-at')).toHaveTextContent('2026-06-01');
+  });
 });

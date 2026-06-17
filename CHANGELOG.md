@@ -2,6 +2,25 @@
 
 이 파일은 `/changelog` 스킬로 자동 기록된다. 최신 항목이 위에 온다.
 
+## [main] - 2026-06-17 16:51
+
+### Prompt
+> "in progress 탭에 있는 카드의 날짜를 선택하면 'value.toISOString is not a function' 에러가 발생하는데, 확인해주고 수정해줘."
+> "vercel에 올릴 준비를 위해 npx tsc --noEmit, (npm) run build 수행해줘."
+
+### Changes
+- **Modified**: TicketDetailView 날짜 포맷 버그 수정 — getBoard 응답의 ISO 문자열 날짜(Date 아님)를 처리하도록 `formatDate`가 Date·string·null 모두 지원 (`src/client/components/ticket/TicketDetailView.tsx`)
+- **Modified**: 홈 `/` 를 동적 렌더로 지정(`export const dynamic = 'force-dynamic'`) — 빌드 타임 프리렌더 시 DB 접근(ECONNRESET) 방지, Vercel 배포 대응 (`src/app/page.tsx`)
+- **Modified**: ISO 문자열 날짜 케이스 테스트 추가 (`__test__/client/components/ticket/TicketDetailView.test.tsx`)
+
+### Files Modified
+- `src/client/components/ticket/TicketDetailView.tsx` (+7, -3 lines)
+- `src/app/page.tsx` (+3, -0 lines)
+- `__test__/client/components/ticket/TicketDetailView.test.tsx` (+18, -0 lines)
+
+### Tests
+- npm test: 229 passed / 0 failed (28 test suites), tsc --noEmit 통과, next build 성공
+
 ## [main] - 2026-06-17 14:10
 
 ### Prompt

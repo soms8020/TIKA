@@ -7,9 +7,13 @@ interface TicketDetailViewProps {
   ticket: Ticket;
 }
 
-// Date → YYYY-MM-DD, 값이 없으면 "-"
-const formatDate = (value: Date | null): string =>
-  value ? value.toISOString().slice(0, 10) : '-';
+// Date | ISO 문자열 → YYYY-MM-DD, 값이 없으면 "-"
+// getBoard 응답은 JSON 직렬화로 날짜가 ISO 문자열로 들어오므로 둘 다 처리한다.
+const formatDate = (value: Date | string | null): string => {
+  if (!value) return '-';
+  const iso = value instanceof Date ? value.toISOString() : String(value);
+  return iso.slice(0, 10);
+};
 
 export const TicketDetailView = ({ ticket }: TicketDetailViewProps) => (
   <dl className="detail-view">

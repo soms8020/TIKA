@@ -123,6 +123,7 @@ src/shared/에서 타입과 검증 스키마를 공유한다.
 
 ## 최근 변경사항 (최근 14일)
 <!-- RECENT_CHANGES_START -->
+- **2026-06-17** [main] TicketDetailView 날짜(ISO 문자열) 포맷 버그 수정 + 홈 force-dynamic(Vercel 빌드 대응) (3 files, +28/-3)
 - **2026-06-17** [main] 디자인 토큰(colors.json)·스위밍레인 색/타이포·트렐로풍 보드·반응형·레이아웃 재구성 + TicketCard 접근성/성능(드래그 핸들·memo) + useTickets 재조회 왕복 제거·reconcile (17 files, +855/-349)
 - **2026-06-17** [main] 보드 완성 — DnD(드롭 해석·position 계산)·낙관적 reorder/complete·필터·BoardContainer + page.tsx 서버 컴포넌트, 프리뷰/목 데이터 정리 (25 files, +1678/-463)
 - **2026-06-15** [main] TicketForm/TicketDetailView/TicketModal TDD 구현(생성 폼·읽기전용 상세·2단계 삭제 모달) + 프리뷰 연동 (8 files, +756/-2)

@@ -9,7 +9,15 @@ import {
   type BoardData,
   type TicketWithMeta,
 } from '@/shared/types';
-import { resolveDrop, moveTicket, completeOnBoard } from '@/client/lib/boardDnd';
+import {
+  resolveDrop,
+  moveTicket,
+  completeOnBoard,
+  withOverdue,
+  upsertTicket,
+  removeTicketById,
+  applyReorderResult,
+} from '@/client/lib/boardDnd';
 
 const card = (
   id: number,
@@ -115,5 +123,60 @@ describe('completeOnBoard', () => {
     expect(done?.status).toBe(TICKET_STATUS.DONE);
     expect(done?.completedAt).toBeInstanceOf(Date);
     expect(done?.isOverdue).toBe(false);
+  });
+});
+
+describe('withOverdue', () => {
+  it('과거 dueDate + 미완료 티켓이면 isOverdue=true', () => {
+    expect(
+      withOverdue(card(1, TICKET_STATUS.TODO, 0, { dueDate: '2020-01-01' })).isOverdue,
+    ).toBe(true);
+  });
+
+  it('DONE 이거나 dueDate 가 없으면 isOverdue=false', () => {
+    expect(
+      withOverdue(card(1, TICKET_STATUS.DONE, 0, { dueDate: '2020-01-01' })).isOverdue,
+    ).toBe(false);
+    expect(withOverdue(card(1, TICKET_STATUS.TODO, 0, { dueDate: null })).isOverdue).toBe(false);
+  });
+});
+
+describe('upsertTicket', () => {
+  it('새 티켓을 status 칼럼에 position 정렬로 삽입한다', () => {
+    const next = upsertTicket(makeBoard(), card(99, TICKET_STATUS.TODO, 512));
+    expect(next.TODO.map((t) => t.id)).toEqual([1, 99, 2, 5]); // 0,512,1024,2048
+  });
+
+  it('이미 존재하는 id 는 교체(칼럼 이동 포함)한다', () => {
+    const next = upsertTicket(makeBoard(), card(1, TICKET_STATUS.IN_PROGRESS, 2048));
+    expect(next.TODO.map((t) => t.id)).toEqual([2, 5]); // 1 제거됨
+    expect(next.IN_PROGRESS.map((t) => t.id)).toEqual([3, 1]); // 0, 2048
+  });
+});
+
+describe('removeTicketById', () => {
+  it('해당 id 를 모든 칼럼에서 제거한다', () => {
+    const next = removeTicketById(makeBoard(), 1);
+    expect(next.TODO.map((t) => t.id)).toEqual([2, 5]);
+  });
+});
+
+describe('applyReorderResult', () => {
+  it('이동 티켓을 서버 position 으로, affected 도 반영 후 정렬한다', () => {
+    const board: BoardData = {
+      BACKLOG: [],
+      TODO: [card(1, TICKET_STATUS.TODO, 0)],
+      IN_PROGRESS: [card(3, TICKET_STATUS.IN_PROGRESS, 0)],
+      DONE: [],
+    };
+    const next = applyReorderResult(board, {
+      ticket: card(1, TICKET_STATUS.IN_PROGRESS, 1024),
+      affected: [{ id: 3, position: 512 }],
+    });
+
+    expect(next.TODO).toHaveLength(0);
+    expect(next.IN_PROGRESS.map((t) => t.id)).toEqual([3, 1]); // 512 < 1024
+    expect(next.IN_PROGRESS.find((t) => t.id === 1)?.position).toBe(1024);
+    expect(next.IN_PROGRESS.find((t) => t.id === 3)?.position).toBe(512);
   });
 });

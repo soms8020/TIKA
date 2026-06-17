@@ -1,17 +1,12 @@
-// TDD Red — TicketCard (TC-COMP-001 변환)
-// 명세: docs/TEST_CASES.md TC-COMP-001, COMPONENT_SPEC 2.6, FR-003/004/017/018
-// 대상(미구현): src/client/components/ticket/TicketCard.tsx
+// TicketCard (TC-COMP-001) — 열기 버튼 + 전용 드래그 핸들 분리, React.memo
+// 명세: docs/COMPONENT_SPEC.md §2.6, FR-003/004/017/018
 //
 // 계약(contract):
-//   Props: { ticket: TicketWithMeta; onClick: () => void }
-//   루트: role="button", aria-label="티켓: {title}"
-//         - status=DONE      → 클래스 'ticket-card-done'
-//         - isOverdue=true   → 속성 data-overdue="true"
-//   제목: 클래스 'card__title' (1줄 말줄임)
-//   우선순위 뱃지: 속성 data-priority={priority}
-//   종료예정일: data-testid="ticket-due-date" (dueDate=null 이면 미렌더)
-//
-// dnd-kit은 mock 처리 (DndContext 없이 렌더 가능하게).
+//   Props: { ticket: TicketWithMeta; onSelect: (ticket) => void; overlay?: boolean }
+//   루트: div.card (드래그 노드), data-overdue / ticket-card-done 클래스
+//   열기: button.card__open  (aria-label="티켓 열기: {title}") → onSelect(ticket)
+//   드래그: button.card__drag-handle (aria-label="드래그하여 이동") = dnd-kit activator
+//   overlay=true → 비대화형 복제본(card--overlay, aria-hidden, 버튼 없음)
 import { render, screen, fireEvent } from '@testing-library/react';
 import {
   TICKET_STATUS,
@@ -19,22 +14,20 @@ import {
   type TicketWithMeta,
 } from '@/shared/types';
 
-// --- dnd-kit mock ---
+// --- dnd-kit mock (드래그 핸들: setActivatorNodeRef 포함) ---
 jest.mock('@dnd-kit/sortable', () => ({
   useSortable: () => ({
     attributes: {},
     listeners: {},
     setNodeRef: jest.fn(),
+    setActivatorNodeRef: jest.fn(),
     transform: null,
     transition: undefined,
     isDragging: false,
   }),
 }));
 jest.mock('@dnd-kit/utilities', () => ({
-  CSS: {
-    Transform: { toString: () => '' },
-    Translate: { toString: () => '' },
-  },
+  CSS: { Transform: { toString: () => '' }, Translate: { toString: () => '' } },
 }));
 
 import { TicketCard } from '@/client/components/ticket/TicketCard';
@@ -64,62 +57,84 @@ describe('TicketCard (TC-COMP-001)', () => {
   // C001-1: 기본 렌더링
   it('C001-1: 제목, 우선순위 뱃지, 종료예정일을 렌더한다', () => {
     const { container } = render(
-      <TicketCard ticket={makeTicket()} onClick={() => {}} />,
+      <TicketCard ticket={makeTicket()} onSelect={() => {}} />,
     );
     expect(screen.getByText('기본 티켓')).toBeInTheDocument();
     expect(container.querySelector('[data-priority="MEDIUM"]')).toBeInTheDocument();
     expect(screen.getByTestId('ticket-due-date')).toHaveTextContent('2026-06-20');
   });
 
-  // C001-2: 오버듀 표시
-  it('C001-2: isOverdue=true 이면 data-overdue 속성을 가진다', () => {
-    render(<TicketCard ticket={makeTicket({ isOverdue: true })} onClick={() => {}} />);
-    expect(screen.getByRole('button')).toHaveAttribute('data-overdue', 'true');
+  // C001-2: 오버듀 → 루트 카드에 data-overdue
+  it('C001-2: isOverdue=true 이면 카드에 data-overdue 속성을 가진다', () => {
+    const { container } = render(
+      <TicketCard ticket={makeTicket({ isOverdue: true })} onSelect={() => {}} />,
+    );
+    expect(container.querySelector('.card')).toHaveAttribute('data-overdue', 'true');
   });
 
-  // C001-3: 완료 상태
+  // C001-3: 완료 상태 → 루트 카드에 ticket-card-done
   it('C001-3: status=DONE 이면 ticket-card-done 클래스를 가진다', () => {
-    render(
-      <TicketCard
-        ticket={makeTicket({ status: TICKET_STATUS.DONE })}
-        onClick={() => {}}
-      />,
+    const { container } = render(
+      <TicketCard ticket={makeTicket({ status: TICKET_STATUS.DONE })} onSelect={() => {}} />,
     );
-    expect(screen.getByRole('button')).toHaveClass('ticket-card-done');
+    expect(container.querySelector('.card')).toHaveClass('ticket-card-done');
   });
 
   // C001-4: 종료예정일 없는 티켓
   it('C001-4: dueDate=null 이면 종료예정일 영역을 숨긴다', () => {
-    render(<TicketCard ticket={makeTicket({ dueDate: null })} onClick={() => {}} />);
+    render(<TicketCard ticket={makeTicket({ dueDate: null })} onSelect={() => {}} />);
     expect(screen.queryByTestId('ticket-due-date')).toBeNull();
   });
 
-  // C001-5: 클릭 이벤트
-  it('C001-5: 카드 클릭 시 onClick 을 호출한다', () => {
-    const onClick = jest.fn();
-    render(<TicketCard ticket={makeTicket()} onClick={onClick} />);
-    fireEvent.click(screen.getByRole('button'));
-    expect(onClick).toHaveBeenCalledTimes(1);
+  // C001-5: 열기 버튼 클릭 → onSelect(ticket)
+  it('C001-5: 열기 버튼 클릭 시 onSelect 를 티켓과 함께 호출한다', () => {
+    const onSelect = jest.fn();
+    const ticket = makeTicket();
+    render(<TicketCard ticket={ticket} onSelect={onSelect} />);
+    fireEvent.click(screen.getByRole('button', { name: /티켓 열기/ }));
+    expect(onSelect).toHaveBeenCalledWith(ticket);
   });
 
-  // C001-6: 긴 제목 말줄임
+  // C001-6: 긴 제목 말줄임 클래스
   it('C001-6: 긴 제목에 말줄임 클래스(card__title)를 적용한다', () => {
     const longTitle = '가'.repeat(200);
-    render(<TicketCard ticket={makeTicket({ title: longTitle })} onClick={() => {}} />);
+    render(<TicketCard ticket={makeTicket({ title: longTitle })} onSelect={() => {}} />);
     expect(screen.getByText(longTitle)).toHaveClass('card__title');
   });
 
-  // C001-7: 우선순위별 뱃지 data-priority
+  // C001-7: 우선순위별 data-priority
   it.each([
     TICKET_PRIORITY.LOW,
     TICKET_PRIORITY.MEDIUM,
     TICKET_PRIORITY.HIGH,
   ])('C001-7: priority=%s 이면 뱃지에 data-priority 속성을 가진다', (priority) => {
     const { container } = render(
-      <TicketCard ticket={makeTicket({ priority })} onClick={() => {}} />,
+      <TicketCard ticket={makeTicket({ priority })} onSelect={() => {}} />,
     );
-    expect(
-      container.querySelector(`[data-priority="${priority}"]`),
-    ).toBeInTheDocument();
+    expect(container.querySelector(`[data-priority="${priority}"]`)).toBeInTheDocument();
+  });
+
+  // C001-8: 전용 드래그 핸들 버튼 제공
+  it('C001-8: "드래그하여 이동" 핸들 버튼을 제공한다', () => {
+    render(<TicketCard ticket={makeTicket()} onSelect={() => {}} />);
+    const handle = screen.getByRole('button', { name: '드래그하여 이동' });
+    expect(handle).toBeInTheDocument();
+    expect(handle).toHaveClass('card__drag-handle');
+  });
+
+  // C001-9: 열기 버튼은 네이티브 button (키보드 Enter/Space 기본 활성화)
+  it('C001-9: 열기 버튼은 type="button" 네이티브 버튼이다', () => {
+    render(<TicketCard ticket={makeTicket()} onSelect={() => {}} />);
+    expect(screen.getByRole('button', { name: /티켓 열기/ })).toHaveAttribute('type', 'button');
+  });
+
+  // C001-10: overlay 복제본은 비대화형(aria-hidden, 버튼 없음)
+  it('C001-10: overlay=true 면 aria-hidden 비대화형 복제본을 렌더한다', () => {
+    const { container } = render(
+      <TicketCard ticket={makeTicket()} onSelect={() => {}} overlay />,
+    );
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(container.querySelector('.card--overlay')).toBeInTheDocument();
+    expect(container.querySelector('.card[aria-hidden="true"]')).toBeInTheDocument();
   });
 });

@@ -61,7 +61,6 @@ export const BoardContainer = ({ initialData }: BoardContainerProps) => {
   return (
     <div className="board-container">
       <BoardHeader onCreateClick={() => setCreating(true)} />
-      <FilterBar activeFilter={filter} onFilterChange={setFilter} counts={counts} />
 
       {error && (
         <p role="alert" className="board-error">
@@ -69,12 +68,20 @@ export const BoardContainer = ({ initialData }: BoardContainerProps) => {
         </p>
       )}
 
+      {/* 좌측 Backlog(전체 높이) + 우측[상단 필터 48px + 하단 3칼럼] */}
       <Board
         board={visibleBoard}
         onTicketClick={setSelected}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         activeTicket={activeTicket}
+        filterSlot={
+          <FilterBar
+            activeFilter={filter}
+            onFilterChange={setFilter}
+            counts={counts}
+          />
+        }
       />
 
       {creating && (

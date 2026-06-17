@@ -28,6 +28,7 @@ jest.mock('@dnd-kit/sortable', () => ({
     attributes: {},
     listeners: {},
     setNodeRef: jest.fn(),
+    setActivatorNodeRef: jest.fn(),
     transform: null,
     transition: undefined,
     isDragging: false,
@@ -98,7 +99,7 @@ describe('Board', () => {
         onTicketClick={onTicketClick}
       />,
     );
-    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByRole('button', { name: /티켓 열기/ }));
     expect(onTicketClick).toHaveBeenCalledWith(ticket);
   });
 });

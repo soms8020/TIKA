@@ -22,6 +22,7 @@ jest.mock('@dnd-kit/sortable', () => ({
     attributes: {},
     listeners: {},
     setNodeRef: jest.fn(),
+    setActivatorNodeRef: jest.fn(),
     transform: null,
     transition: undefined,
     isDragging: false,
@@ -71,7 +72,8 @@ describe('Column', () => {
     render(
       <Column status={TICKET_STATUS.TODO} tickets={tickets} onTicketClick={() => {}} />,
     );
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    // 카드마다 열기 버튼 1개 → 3개
+    expect(screen.getAllByRole('button', { name: /티켓 열기/ })).toHaveLength(3);
   });
 
   it('빈 칼럼이면 안내 문구를 표시한다', () => {
@@ -114,7 +116,7 @@ describe('Column', () => {
     render(
       <Column status={TICKET_STATUS.TODO} tickets={[ticket]} onTicketClick={onTicketClick} />,
     );
-    fireEvent.click(screen.getByRole('button'));
+    fireEvent.click(screen.getByRole('button', { name: /티켓 열기/ }));
     expect(onTicketClick).toHaveBeenCalledWith(ticket);
   });
 });

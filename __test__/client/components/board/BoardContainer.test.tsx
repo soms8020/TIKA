@@ -23,8 +23,10 @@ jest.mock('@/client/components/board/Board', () => ({
     board: BoardData;
     onTicketClick: (t: TicketWithMeta) => void;
     onDragEnd?: (e: { active: { id: number }; over: { id: number | string } | null }) => void;
+    filterSlot?: import('react').ReactNode;
   }) => (
     <div data-testid="board-mock">
+      {props.filterSlot}
       <span data-testid="todo-count">{props.board.TODO.length}</span>
       <span data-testid="backlog-count">{props.board.BACKLOG.length}</span>
       <button data-testid="click-card" onClick={() => props.onTicketClick(props.board.TODO[0])}>

@@ -2,6 +2,46 @@
 
 이 파일은 `/changelog` 스킬로 자동 기록된다. 최신 항목이 위에 온다.
 
+## [main] - 2026-06-17 14:10
+
+### Prompt
+> "colors.json / DESIGN_SYSTEM 를 우리 사이트에 맞도록 컬러·UI 조정. 4개 스위밍라인 구분선, 각 배경색 다르게, 제목 14pt bold·내용/인풋 12pt, input box 일관성. 좌측 Backlog 전체 높이 + 우측 상단 필터(48px) + 하단 3영역 구조."
+> "트렐로.png 참고로 board 스타일 개선(연한 컬럼 배경, 헤더 카드 갯수 뱃지). 반응형: <768 단일·Backlog 숨김 / 768 2컬럼 / 1024 4컬럼 풀."
+> "TicketCard 접근성/UX·렌더링 성능·코드 품질 검토 후 1,2,3 모두 진행(키보드 DnD·React.memo·전용 드래그 핸들)."
+> "Board 성능 검토(번들/API/낙관적 업데이트) → ②(create/update/remove 반환 엔티티 반영, 재조회 왕복 제거) + ③-1(reorder/complete 성공 시 서버 응답 reconcile) 적용."
+
+### Changes
+- **Added**: 디자인 토큰 단일 출처 colors.json + 디자인 시스템 문서 (`src/shared/design/colors.json`, `docs/DESIGN_SYSTEM.md`)
+- **Modified**: 4 스위밍레인 색/구분선·상단 액센트, 타이포(제목 14px Bold/내용·입력 12px), input 일관 스타일, 트렐로풍 카드/카운트 뱃지, 콘텐츠 영역 레이아웃(Backlog 전체높이 + 우측 필터48px+3칼럼)·반응형 (`src/styles/globals.css`)
+- **Modified**: 콘텐츠 레이아웃 재구성 — 필터를 우측 영역으로(`filterSlot`), 반응형 칼럼 (`src/client/components/board/Board.tsx`, `BoardContainer.tsx`, `Column.tsx`)
+- **Modified**: TicketCard 접근성/성능 리팩터 — 열기 버튼 + 전용 드래그 핸들 분리(키보드 DnD 보존), React.memo, overlay 비대화형 복제본 (`src/client/components/ticket/TicketCard.tsx`)
+- **Modified**: useTickets 성능 — create/update/remove 반환 엔티티 반영(재조회 왕복 제거), reorder/complete 성공 시 서버 응답 reconcile (`src/client/hooks/useTickets.ts`, `src/client/lib/boardDnd.ts`)
+- **Modified**: TicketCard Props 계약(onSelect/overlay) 명세 갱신 (`docs/COMPONENT_SPEC.md`)
+- **Modified**: 위 변경에 맞춘 테스트 갱신 (`__test__/client/...`)
+
+### Files Modified
+- `src/styles/globals.css` (+307, -170 lines)
+- `src/shared/design/colors.json` (+36, -0 lines)
+- `docs/DESIGN_SYSTEM.md` (+73, -0 lines)
+- `docs/COMPONENT_SPEC.md` (+11, -8 lines)
+- `src/client/components/ticket/TicketCard.tsx` (+78, -35 lines)
+- `src/client/components/board/Board.tsx` (+19, -10 lines)
+- `src/client/components/board/BoardContainer.tsx` (+8, -1 lines)
+- `src/client/components/board/Column.tsx` (+2, -5 lines)
+- `src/client/hooks/useTickets.ts` (+33, -9 lines)
+- `src/client/lib/boardDnd.ts` (+66, -0 lines)
+- `__test__/client/components/ticket/TicketCard.test.tsx` (+58, -43 lines)
+- `__test__/client/hooks/useTickets.test.ts` (+88, -64 lines)
+- `__test__/client/lib/boardDnd.test.ts` (+64, -1 lines)
+- `__test__/client/components/board/Column.test.tsx` (+4, -2 lines)
+- `__test__/client/components/board/Board.test.tsx` (+2, -1 lines)
+- `__test__/client/components/board/BoardContainer.test.tsx` (+2, -0 lines)
+- `.claude/settings.local.json` (+4, -1 lines)
+- (별도: Vercel agent-skills `web-design-guidelines`·`vercel-react-best-practices` 설치 — 벤더 자산이라 이번 커밋에서 제외)
+
+### Tests
+- npm test: 214 passed / 0 failed (28 test suites)
+
 ## [main] - 2026-06-17 11:24
 
 ### Prompt

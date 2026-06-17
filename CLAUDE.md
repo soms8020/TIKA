@@ -123,6 +123,7 @@ src/shared/에서 타입과 검증 스키마를 공유한다.
 
 ## 최근 변경사항 (최근 14일)
 <!-- RECENT_CHANGES_START -->
+- **2026-06-17** [main] 디자인 토큰(colors.json)·스위밍레인 색/타이포·트렐로풍 보드·반응형·레이아웃 재구성 + TicketCard 접근성/성능(드래그 핸들·memo) + useTickets 재조회 왕복 제거·reconcile (17 files, +855/-349)
 - **2026-06-17** [main] 보드 완성 — DnD(드롭 해석·position 계산)·낙관적 reorder/complete·필터·BoardContainer + page.tsx 서버 컴포넌트, 프리뷰/목 데이터 정리 (25 files, +1678/-463)
 - **2026-06-15** [main] TicketForm/TicketDetailView/TicketModal TDD 구현(생성 폼·읽기전용 상세·2단계 삭제 모달) + 프리뷰 연동 (8 files, +756/-2)
 - **2026-06-15** [main] 보드 UI(002-board-ui) 명세 + 칸반/공통 UI 컴포넌트 및 테스트 + 미리보기 페이지 추가 (28 files, +3320/-5)
@@ -134,3 +135,13 @@ For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
 `specs/001-create-ticket/plan.md` (feature: 티켓 생성 / POST /api/tickets)
 <!-- SPECKIT END -->
+
+
+## 디자인 시스템
+스타일링 작업 시 반드시 아래 파일들을 참조할 것:
+ - 컬러 토큰 (참조): 'src/shared/design/colors.json'
+ - 디자인 가이드: 'docs/DESIGN_SYSTEM.md'
+ - CSS 변수 (런타임): 'app/globals.css' ':root'
+
+새 컴포넌트 생성 시 colors.json의 semantic 컬러와 DESIGN_SYSTEM.md의 간격/그림자/라운딩 규칙을 따른다.
+컬러 변경 시 colors.json과 globals.css의 CSS 변수를 함께 업데이트 한다.

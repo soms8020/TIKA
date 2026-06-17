@@ -12,7 +12,14 @@ import {
   type ReorderableStatus,
 } from '@/shared/types';
 import * as ticketApi from '@/client/api/ticketApi';
-import { moveTicket, completeOnBoard } from '@/client/lib/boardDnd';
+import {
+  moveTicket,
+  completeOnBoard,
+  withOverdue,
+  upsertTicket,
+  removeTicketById,
+  applyReorderResult,
+} from '@/client/lib/boardDnd';
 
 interface UseTicketsReturn {
   board: BoardData;
@@ -41,14 +48,12 @@ export function useTickets(initialData: BoardData): UseTicketsReturn {
   const boardRef = useRef(board);
   boardRef.current = board;
 
-  // 재조회 기반(create/update/remove): 로딩 토글 → 액션 → 성공 시 board 재조회
+  // 로딩 토글 래퍼(create/update/remove). 액션이 반환 엔티티를 직접 보드에 반영한다.
   const run = useCallback(async (action: () => Promise<void>) => {
     setLoading(true);
     setError(null);
     try {
       await action();
-      const next = await ticketApi.getBoard();
-      setBoard(next);
     } catch (e) {
       setError(messageOf(e));
     } finally {
@@ -72,27 +77,43 @@ export function useTickets(initialData: BoardData): UseTicketsReturn {
     [],
   );
 
+  // 변경 후 서버가 돌려준 엔티티를 보드에 반영(재조회 왕복 제거)
   const create = useCallback(
-    (data: CreateTicketInput) => run(async () => void (await ticketApi.create(data))),
+    (data: CreateTicketInput) =>
+      run(async () => {
+        const created = await ticketApi.create(data);
+        setBoard((prev) => upsertTicket(prev, withOverdue(created)));
+      }),
     [run],
   );
 
   const update = useCallback(
     (id: number, data: UpdateTicketInput) =>
-      run(async () => void (await ticketApi.update(id, data))),
+      run(async () => {
+        const updated = await ticketApi.update(id, data);
+        setBoard((prev) => upsertTicket(prev, withOverdue(updated)));
+      }),
     [run],
   );
 
   const remove = useCallback(
-    (id: number) => run(async () => void (await ticketApi.remove(id))),
+    (id: number) =>
+      run(async () => {
+        await ticketApi.remove(id);
+        setBoard((prev) => removeTicketById(prev, id));
+      }),
     [run],
   );
 
+  // 낙관적 반영 후 성공 시 서버 응답으로 reconcile (position drift 보정)
   const reorder = useCallback(
     (ticketId: number, status: ReorderableStatus, position: number) =>
       optimistic(
         (b) => moveTicket(b, ticketId, status, position),
-        () => ticketApi.reorder({ ticketId, status, position }),
+        async () => {
+          const result = await ticketApi.reorder({ ticketId, status, position });
+          setBoard((prev) => applyReorderResult(prev, result));
+        },
       ),
     [optimistic],
   );
@@ -101,7 +122,10 @@ export function useTickets(initialData: BoardData): UseTicketsReturn {
     (id: number) =>
       optimistic(
         (b) => completeOnBoard(b, id),
-        () => ticketApi.complete(id),
+        async () => {
+          const done = await ticketApi.complete(id);
+          setBoard((prev) => upsertTicket(prev, withOverdue(done)));
+        },
       ),
     [optimistic],
   );

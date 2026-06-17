@@ -44,11 +44,8 @@ export const Column = ({ status, tickets, onTicketClick }: ColumnProps) => {
             <p className="column__empty">이 칼럼에 티켓이 없습니다</p>
           ) : (
             tickets.map((ticket) => (
-              <TicketCard
-                key={ticket.id}
-                ticket={ticket}
-                onClick={() => onTicketClick(ticket)}
-              />
+              // onSelect 는 안정 참조(onTicketClick) → TicketCard 의 React.memo 가 유효
+              <TicketCard key={ticket.id} ticket={ticket} onSelect={onTicketClick} />
             ))
           )}
         </div>

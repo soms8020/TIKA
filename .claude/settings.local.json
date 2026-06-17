@@ -3,7 +3,10 @@
     "allow": [
       "PowerShell(& .specify/scripts/powershell/setup-plan.ps1 -Json)",
       "Bash(npm test *)",
-      "Bash(npx jest *)"
+      "Bash(npx jest *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3003/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3003/)",
+      "Bash(npx skills *)"
     ]
   }
 }

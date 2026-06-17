@@ -4,6 +4,7 @@ import {
   TICKET_STATUS,
   COLUMN_ORDER,
   type BoardData,
+  type Ticket,
   type TicketStatus,
   type TicketWithMeta,
 } from '@/shared/types';
@@ -113,4 +114,69 @@ export function completeOnBoard(board: BoardData, ticketId: number): BoardData {
   };
   next.DONE = [done, ...next.DONE];
   return next;
+}
+
+// 서버가 돌려준 Ticket 에 클라이언트 파생값(isOverdue) 을 계산해 붙인다.
+// dueDate 는 'YYYY-MM-DD' 문자열이라 문자열 비교로 안전하게 판정한다.
+export function withOverdue(ticket: Ticket): TicketWithMeta {
+  const today = new Date().toISOString().slice(0, 10);
+  const isOverdue =
+    !!ticket.dueDate &&
+    ticket.status !== TICKET_STATUS.DONE &&
+    ticket.dueDate < today;
+  return { ...ticket, isOverdue };
+}
+
+const byPosition = (a: { position: number }, b: { position: number }) =>
+  a.position - b.position;
+
+// 서버 응답 티켓을 보드에 반영(없으면 추가/있으면 교체). 칼럼 이동도 처리.
+export function upsertTicket(
+  board: BoardData,
+  ticket: TicketWithMeta,
+): BoardData {
+  const next = boardWithout(board, ticket.id);
+  next[ticket.status] = [...next[ticket.status], ticket].sort(byPosition);
+  return next;
+}
+
+// id 로 보드에서 제거(삭제 결과 반영).
+export function removeTicketById(board: BoardData, id: number): BoardData {
+  return boardWithout(board, id);
+}
+
+interface ReorderResult {
+  ticket: Ticket;
+  affected: { id: number; position: number }[];
+}
+
+// reorder 성공 응답으로 reconcile: 이동 티켓은 서버 position 으로,
+// affected 티켓들의 position 도 갱신한 뒤 각 칼럼을 재정렬한다.
+export function applyReorderResult(
+  board: BoardData,
+  result: ReorderResult,
+): BoardData {
+  const moved = withOverdue(result.ticket);
+  const affected = new Map(result.affected.map((a) => [a.id, a.position]));
+
+  const base = boardWithout(board, moved.id);
+  const applyAffected = (list: TicketWithMeta[]): TicketWithMeta[] =>
+    list.map((t) =>
+      affected.has(t.id) ? { ...t, position: affected.get(t.id)! } : t,
+    );
+
+  const next: BoardData = {
+    BACKLOG: applyAffected(base.BACKLOG),
+    TODO: applyAffected(base.TODO),
+    IN_PROGRESS: applyAffected(base.IN_PROGRESS),
+    DONE: applyAffected(base.DONE),
+  };
+  next[moved.status] = [...next[moved.status], moved];
+
+  return {
+    BACKLOG: [...next.BACKLOG].sort(byPosition),
+    TODO: [...next.TODO].sort(byPosition),
+    IN_PROGRESS: [...next.IN_PROGRESS].sort(byPosition),
+    DONE: [...next.DONE].sort(byPosition),
+  };
 }

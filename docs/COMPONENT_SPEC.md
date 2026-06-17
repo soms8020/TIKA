@@ -194,7 +194,8 @@ function isThisWeek(ticket: TicketWithMeta): boolean {
 | Prop | 타입 | 설명 |
 |------|------|------|
 | ticket | TicketWithMeta | 티켓 데이터 |
-| onClick | () => void | 클릭 핸들러 (상세 모달) |
+| onSelect | (ticket: TicketWithMeta) => void | 상세 열기 핸들러 (참조 안정 → React.memo) |
+| overlay | boolean? | DragOverlay 복제본(비대화형, aria-hidden) 렌더 |
 
 **표시 정보**:
 - 제목 (1줄, 넘치면 말줄임)
@@ -202,15 +203,17 @@ function isThisWeek(ticket: TicketWithMeta): boolean {
 - 종료예정일 (있을 경우, YYYY-MM-DD 형식)
 - 오버듀 표시 (isOverdue === true일 때 빨간 테두리 또는 아이콘)
 
-**동작**:
-1. useSortable로 드래그 가능하게 설정
-2. 클릭 시 onClick 호출 (드래그와 클릭 구분 필요)
-3. 드래그 중일 때 반투명 + 그림자 스타일
+**구조/동작**:
+1. 카드 컨테이너(div) = 드래그 노드(`setNodeRef`). 비대화형.
+2. **열기 버튼**(`button.card__open`): 카드 본문을 감싸며 클릭/Enter/Space로 `onSelect(ticket)` 호출 (네이티브 button → 키보드 활성화 기본 제공).
+3. **드래그 핸들**(`button.card__drag-handle`): `setActivatorNodeRef` + dnd-kit `attributes`/`listeners`. 포인터·키보드(Space 집기/방향키/Space 드롭) 드래그를 담당. 리스너를 덮어쓰지 않는다.
+4. 드래그 중 반투명(`card--dragging`), 오버레이 복제본은 `card--overlay` + `aria-hidden`.
+5. `React.memo`로 감싸고 `onSelect`는 부모에서 안정 참조로 전달(useTickets 핸들러 직접 전달)하여 보드 리렌더 시 변경된 카드만 재렌더.
 
 **접근성**:
-- `role="button"`
-- `aria-label="티켓: {title}"`
-- 키보드 포커스 가능 (Tab), Enter로 상세 열기
+- 열기/드래그를 **별도 `<button>`** 으로 분리 → 시맨틱·키보드 충돌 없음.
+- 열기 버튼 `aria-label="티켓 열기: {title}"`, 드래그 핸들 `aria-label="드래그하여 이동"`.
+- 각 버튼 `:focus-visible` 링. DragOverlay 복제본은 `aria-hidden`+비포커스.
 
 ---
 

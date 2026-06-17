@@ -2,6 +2,58 @@
 
 이 파일은 `/changelog` 스킬로 자동 기록된다. 최신 항목이 위에 온다.
 
+## [main] - 2026-06-17 11:24
+
+### Prompt
+> "이제 남은 업무를 구현해야 해. 티켓의 드래그 앤 드롭(스윔라인 어느 곳이든 드래그 앤 드롭으로 이동 및 티켓의 위치 포지션 계산)과 app/page.tsx를 서버 컴포넌트로 변환해야 해. ... useTickets의 reorder/complete는 COMPONENT_SPEC §4의 낙관적 업데이트 패턴 적용(백업 → UI 즉시 반영 → API 호출 → 실패 시 롤백)"
+> "app/preview/page.tsx 프리뷰 페이지를 삭제해줘. 이제 실제 page.tsx에서 전체 앱을 확인할 수 있어."
+> "변경사항 정리해줘 /mocks/tickets.ts는 정리해도 돼."
+
+### Changes
+- **Added**: 삽입 위치 계산 `computeInsertPosition` (`src/client/lib/position.ts`)
+- **Added**: 드롭 해석 + 낙관적 보드 변형 `resolveDrop`/`moveTicket`/`completeOnBoard` (`src/client/lib/boardDnd.ts`)
+- **Added**: 이번주/오버듀 필터·카운트 + 주 경계 날짜 유틸 (`src/client/lib/filters.ts`, `src/client/lib/date.ts`)
+- **Added**: 보드 오케스트레이터 — useTickets+Header+FilterBar+Board+TicketModal+DnD 분기 (`src/client/components/board/BoardContainer.tsx`)
+- **Added**: 상단 헤더(생성 버튼) / 필터 바(이번주·일정초과 토글) (`src/client/components/board/BoardHeader.tsx`, `FilterBar.tsx`)
+- **Added**: 티켓 CRUD 훅 — create/update/remove 재조회 + reorder/complete 낙관적 업데이트 (`src/client/hooks/useTickets.ts`)
+- **Added**: 위 모듈들의 TDD 테스트 10종 (`__test__/client/lib/*`, `__test__/client/hooks/useTickets.test.ts`, `__test__/client/components/board/*`, `__test__/client/api/ticketApi.test.ts`, `__test__/app/page.test.tsx`)
+- **Modified**: `app/page.tsx` 서버 컴포넌트로 전환 — `ticketService.getBoard()` 조회 후 BoardContainer 주입 (`src/app/page.tsx`)
+- **Modified**: ticketApi 호출 함수 6종(getBoard/create/update/remove/reorder/complete) 구현 (`src/client/api/ticketApi.ts`)
+- **Modified**: Board 에 DnD 핸들러(onDragStart/End)·DragOverlay·PointerSensor 추가 (`src/client/components/board/Board.tsx`)
+- **Modified**: `test:components` npm 스크립트 추가 (`package.json`)
+- **Deleted**: 컴포넌트 프리뷰 페이지 제거 (실제 page.tsx로 대체) (`src/app/preview/page.tsx`)
+- **Deleted**: 프리뷰 전용 목 데이터 정리 (참조처 없음) (`src/client/mocks/tickets.ts`)
+
+### Files Modified
+- `__test__/app/page.test.tsx` (+43, -0 lines)
+- `__test__/client/api/ticketApi.test.ts` (+210, -0 lines)
+- `__test__/client/components/board/Board.test.tsx` (+4, -0 lines)
+- `__test__/client/components/board/BoardContainer.test.tsx` (+154, -0 lines)
+- `__test__/client/components/board/BoardHeader.test.tsx` (+36, -0 lines)
+- `__test__/client/components/board/FilterBar.test.tsx` (+87, -0 lines)
+- `__test__/client/hooks/useTickets.test.ts` (+188, -0 lines)
+- `__test__/client/lib/boardDnd.test.ts` (+119, -0 lines)
+- `__test__/client/lib/date.test.ts` (+78, -0 lines)
+- `__test__/client/lib/filters.test.ts` (+81, -0 lines)
+- `__test__/client/lib/position.test.ts` (+34, -0 lines)
+- `package.json` (+1, -0 lines)
+- `src/app/page.tsx` (+10, -4 lines)
+- `src/app/preview/page.tsx` (+0, -302 lines)
+- `src/client/api/ticketApi.ts` (+88, -3 lines)
+- `src/client/components/board/Board.tsx` (+53, -23 lines)
+- `src/client/components/board/BoardContainer.tsx` (+113, -0 lines)
+- `src/client/components/board/BoardHeader.tsx` (+27, -0 lines)
+- `src/client/components/board/FilterBar.tsx` (+42, -0 lines)
+- `src/client/hooks/useTickets.ts` (+110, -0 lines)
+- `src/client/lib/boardDnd.ts` (+116, -0 lines)
+- `src/client/lib/date.ts` (+42, -0 lines)
+- `src/client/lib/filters.ts` (+29, -0 lines)
+- `src/client/lib/position.ts` (+13, -0 lines)
+- `src/client/mocks/tickets.ts` (+0, -131 lines)
+
+### Tests
+- npm test: 205 passed / 0 failed (28 test suites)
+
 ## [main] - 2026-06-15 17:02
 
 ### Prompt

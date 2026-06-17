@@ -6,3 +6,9 @@ dist/
 .env.test
 *.log
 *.tsbuildinfo
+
+# Vercel agent-skills (벤더 자산 — `npx skills add` 로 재생성)
+.agents/
+skills-lock.json
+.claude/skills/vercel-react-best-practices/
+.claude/skills/web-design-guidelines/

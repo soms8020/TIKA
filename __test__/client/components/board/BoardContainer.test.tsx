@@ -22,15 +22,21 @@ jest.mock('@/client/components/board/Board', () => ({
   Board: (props: {
     board: BoardData;
     onTicketClick: (t: TicketWithMeta) => void;
+    onDragStart?: (e: { active: { id: number } }) => void;
     onDragEnd?: (e: { active: { id: number }; over: { id: number | string } | null }) => void;
+    activeTicket?: TicketWithMeta | null;
     filterSlot?: import('react').ReactNode;
   }) => (
     <div data-testid="board-mock">
       {props.filterSlot}
       <span data-testid="todo-count">{props.board.TODO.length}</span>
       <span data-testid="backlog-count">{props.board.BACKLOG.length}</span>
+      <span data-testid="active-id">{props.activeTicket?.id ?? 'none'}</span>
       <button data-testid="click-card" onClick={() => props.onTicketClick(props.board.TODO[0])}>
         card
+      </button>
+      <button data-testid="drag-start" onClick={() => props.onDragStart?.({ active: { id: 1 } })}>
+        start
       </button>
       <button
         data-testid="drag-done"
@@ -43,6 +49,12 @@ jest.mock('@/client/components/board/Board', () => ({
         onClick={() => props.onDragEnd?.({ active: { id: 1 }, over: { id: 'IN_PROGRESS' } })}
       >
         to-ip
+      </button>
+      <button
+        data-testid="drag-none"
+        onClick={() => props.onDragEnd?.({ active: { id: 1 }, over: null })}
+      >
+        none
       </button>
     </div>
   ),
@@ -80,6 +92,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockedApi.getBoard.mockResolvedValue(initialData);
   mockedApi.create.mockResolvedValue(card(2, TICKET_STATUS.BACKLOG));
+  mockedApi.update.mockResolvedValue(card(1, TICKET_STATUS.TODO));
+  mockedApi.remove.mockResolvedValue(undefined);
   mockedApi.reorder.mockResolvedValue({ ticket: card(1, TICKET_STATUS.IN_PROGRESS), affected: [] });
   mockedApi.complete.mockResolvedValue(card(1, TICKET_STATUS.DONE));
 });
@@ -152,5 +166,51 @@ describe('BoardContainer', () => {
 
     expect(screen.getByTestId('todo-count')).toHaveTextContent('0'); // 오버듀 아님 → 제외
     expect(screen.getByTestId('backlog-count')).toHaveTextContent('1'); // Backlog 불변
+  });
+
+  it('드래그 시작 시 activeTicket 을 설정한다(DragOverlay)', () => {
+    render(<BoardContainer initialData={initialData} />);
+    expect(screen.getByTestId('active-id')).toHaveTextContent('none');
+    fireEvent.click(screen.getByTestId('drag-start'));
+    expect(screen.getByTestId('active-id')).toHaveTextContent('1');
+  });
+
+  it('over 가 없는 드롭은 아무 API 도 호출하지 않는다', async () => {
+    render(<BoardContainer initialData={initialData} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('drag-none'));
+    });
+    expect(mockedApi.complete).not.toHaveBeenCalled();
+    expect(mockedApi.reorder).not.toHaveBeenCalled();
+  });
+
+  it('생성 모달에서 취소하면 닫힌다', () => {
+    render(<BoardContainer initialData={initialData} />);
+    fireEvent.click(screen.getByRole('button', { name: '새 업무' }));
+    expect(screen.getByText('새 티켓 생성')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '취소' }));
+    expect(screen.queryByText('새 티켓 생성')).toBeNull();
+  });
+
+  it('상세 모달에서 수정 제출 시 ticketApi.update 를 호출한다', async () => {
+    render(<BoardContainer initialData={initialData} />);
+    fireEvent.click(screen.getByTestId('click-card'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('ticket-form-submit'));
+    });
+    expect(mockedApi.update).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ title: '할 일 1' }),
+    );
+  });
+
+  it('상세 모달에서 삭제 확인 시 ticketApi.remove 를 호출한다', async () => {
+    render(<BoardContainer initialData={initialData} />);
+    fireEvent.click(screen.getByTestId('click-card'));
+    fireEvent.click(screen.getByTestId('ticket-delete-button'));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '확인' }));
+    });
+    expect(mockedApi.remove).toHaveBeenCalledWith(1);
   });
 });

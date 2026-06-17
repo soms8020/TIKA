@@ -5,7 +5,14 @@
  * - getBoard 그룹화 + Done 24시간 필터 (TC-API-002)
  * - reorderTicket startedAt/completedAt 비즈니스 규칙 (TC-API-007)
  */
-import { getBoard, reorderTicket } from '@/server/services/ticketService';
+import {
+  getBoard,
+  reorderTicket,
+  getTicketById,
+  updateTicket,
+  completeTicket,
+  deleteTicket,
+} from '@/server/services/ticketService';
 import { db } from '@/server/db';
 import type { ReorderTicketInput } from '@/shared/types';
 
@@ -13,12 +20,16 @@ jest.mock('@/server/db', () => ({
   db: {
     select: jest.fn(),
     transaction: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
   },
 }));
 
 const mockedDb = db as unknown as {
   select: jest.Mock;
   transaction: jest.Mock;
+  update: jest.Mock;
+  delete: jest.Mock;
 };
 
 function row(overrides: Record<string, unknown>) {
@@ -288,5 +299,115 @@ describe('reorderTicket (TC-API-007)', () => {
     expect(result?.affected).toEqual([{ id: 2, position: 1024 }]);
     // captured: [moved 초기 update, moved 재정렬(0), id2 재정렬(1024)]
     expect(captured.length).toBe(3);
+  });
+});
+
+// where()로 단건 조회를 모킹하는 헬퍼
+const selectWhere = (value: unknown[]) => ({
+  from: () => ({ where: () => Promise.resolve(value) }),
+});
+
+describe('getTicketById (TC-API-003)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('존재하지 않으면 null 을 반환한다', async () => {
+    mockedDb.select.mockReturnValue(selectWhere([]));
+    expect(await getTicketById(999)).toBeNull();
+  });
+
+  it('존재하면 isOverdue 파생 필드를 포함해 반환한다', async () => {
+    mockedDb.select.mockReturnValue(selectWhere([row({ id: 1, status: 'TODO' })]));
+    const t = await getTicketById(1);
+    expect(t?.id).toBe(1);
+    expect(t).toHaveProperty('isOverdue');
+  });
+});
+
+describe('updateTicket (TC-API-004)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('변경 필드가 없으면 기존 티켓을 그대로 반환한다', async () => {
+    mockedDb.select.mockReturnValue(selectWhere([row({ id: 1, status: 'TODO' })]));
+    const t = await updateTicket(1, {});
+    expect(t?.id).toBe(1);
+    expect(mockedDb.update).not.toHaveBeenCalled();
+  });
+
+  it('전송된 필드를 반영하고 수정된 티켓을 반환한다', async () => {
+    let captured: Record<string, unknown> = {};
+    mockedDb.update.mockReturnValue({
+      set: (v: Record<string, unknown>) => {
+        captured = v;
+        return { where: () => ({ returning: () => Promise.resolve([row({ id: 1, title: '새 제목', status: 'TODO' })]) }) };
+      },
+    });
+    const t = await updateTicket(1, { title: '새 제목', priority: 'HIGH', description: null });
+    expect(captured.title).toBe('새 제목');
+    expect(captured.priority).toBe('HIGH');
+    expect(captured.description).toBeNull();
+    expect(t?.title).toBe('새 제목');
+  });
+
+  it('존재하지 않으면 null 을 반환한다', async () => {
+    mockedDb.update.mockReturnValue({
+      set: () => ({ where: () => ({ returning: () => Promise.resolve([]) }) }),
+    });
+    expect(await updateTicket(1, { title: 'x' })).toBeNull();
+  });
+});
+
+describe('completeTicket (TC-API-005)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('존재하지 않으면 null 을 반환한다', async () => {
+    mockedDb.select.mockReturnValue(selectWhere([]));
+    expect(await completeTicket(999)).toBeNull();
+  });
+
+  it('status=DONE 으로 변경하고 completedAt 을 설정한다', async () => {
+    let selectCall = 0;
+    mockedDb.select.mockImplementation(() => {
+      selectCall += 1;
+      // 1) 존재 확인  2) topPosition(min) 조회
+      return selectCall === 1
+        ? selectWhere([row({ id: 1, status: 'IN_PROGRESS' })])
+        : { from: () => ({ where: () => Promise.resolve([{ min: 0 }]) }) };
+    });
+    let captured: Record<string, unknown> = {};
+    mockedDb.update.mockReturnValue({
+      set: (v: Record<string, unknown>) => {
+        captured = v;
+        return {
+          where: () => ({
+            returning: () =>
+              Promise.resolve([row({ id: 1, status: 'DONE', position: -1024, completedAt: new Date() })]),
+          }),
+        };
+      },
+    });
+
+    const result = await completeTicket(1);
+    expect(result?.status).toBe('DONE');
+    expect(captured.status).toBe('DONE');
+    expect(captured.completedAt).toBeInstanceOf(Date);
+    expect(captured.position).toBe(-1024); // min(0) - 1024
+  });
+});
+
+describe('deleteTicket (TC-API-006)', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('삭제되면 true 를 반환한다', async () => {
+    mockedDb.delete.mockReturnValue({
+      where: () => ({ returning: () => Promise.resolve([{ id: 1 }]) }),
+    });
+    expect(await deleteTicket(1)).toBe(true);
+  });
+
+  it('대상이 없으면 false 를 반환한다', async () => {
+    mockedDb.delete.mockReturnValue({
+      where: () => ({ returning: () => Promise.resolve([]) }),
+    });
+    expect(await deleteTicket(999)).toBe(false);
   });
 });

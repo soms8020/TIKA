@@ -2,20 +2,25 @@ import postgres from 'postgres';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import 'dotenv/config';
 
-// 연결 문자열: Vercel(Neon) 통합은 POSTGRES_URL 을 제공한다.
-// 로컬/타 환경 호환을 위해 DATABASE_URL 도 fallback 으로 허용한다.
-// Next.js 런타임은 .env.local 을 자동 로드한다.
-const connectionString = process.env.POSTGRES_URL ?? process.env.DATABASE_URL;
+// 환경별 DB 분리:
+//   - 로컬 개발(NODE_ENV !== 'production'): DATABASE_URL (로컬 Postgres, 예: tika_dev)
+//   - 프로덕션(Vercel, NODE_ENV === 'production'): POSTGRES_URL (Neon)
+// 한쪽이 비어 있으면 다른 쪽으로 fallback 한다.
+const isProduction = process.env.NODE_ENV === 'production';
+const connectionString = isProduction
+  ? process.env.POSTGRES_URL ?? process.env.DATABASE_URL
+  : process.env.DATABASE_URL ?? process.env.POSTGRES_URL;
 
 if (!connectionString) {
   throw new Error(
-    'POSTGRES_URL(또는 DATABASE_URL) 환경변수가 설정되어 있지 않습니다. .env.local / Vercel 환경변수를 확인하세요.',
+    'DB 연결 문자열이 없습니다. 로컬은 DATABASE_URL, 프로덕션은 POSTGRES_URL 을 설정하세요(.env.local / Vercel).',
   );
 }
 
+// localhost 가 아니면(Neon 등 클라우드) SSL 필수. 로컬 Postgres 는 SSL 을 끈다.
+const isLocalHost = /@(localhost|127\.0\.0\.1|0\.0\.0\.0)[:/]/.test(connectionString);
 const sql = postgres(connectionString, {
-  // Neon/Vercel Postgres 는 SSL 이 필수다(로컬에서 클라우드 DB 에 붙을 때도 동일).
-  ssl: 'require',
+  ssl: isLocalHost ? false : 'require',
 });
 
 export const db = drizzle(sql);

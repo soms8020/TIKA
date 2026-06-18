@@ -2,6 +2,24 @@
 
 이 파일은 `/changelog` 스킬로 자동 기록된다. 최신 항목이 위에 온다.
 
+## [main] - 2026-06-18 10:10
+
+### Prompt
+> "vercel에서 neon db를 만들어서 .env.local에 POSTGRES_URL로 저장했어. src/server/db/index.ts 에 변경사항 반영해줘."
+> "다시 시도해주고 정상인지 확인해줘 / .env.local에 POSTGRES_URL 추가했어"
+
+### Changes
+- **Modified**: DB 연결을 `POSTGRES_URL`(Vercel/Neon) 우선, `DATABASE_URL` fallback 으로 변경 + `ssl: 'require'`(Neon은 로컬에서도 SSL 필수) (`src/server/db/index.ts`)
+- **Modified**: 마이그레이션도 `POSTGRES_URL` 우선 사용 (`drizzle.config.js`)
+
+### Files Modified
+- `src/server/db/index.ts` (+9, -6 lines)
+- `drizzle.config.js` (+1, -1 lines)
+
+### Tests
+- npm test: 229 passed / 0 failed (DB는 테스트에서 mock — 연결 설정 변경 무영향)
+- 실제 검증: Neon 연결 OK + `db:migrate` 적용(tickets 테이블 생성) + `GET /api/tickets` 200
+
 ## [main] - 2026-06-17 16:51
 
 ### Prompt

@@ -2,6 +2,24 @@
 
 이 파일은 `/changelog` 스킬로 자동 기록된다. 최신 항목이 위에 온다.
 
+## [main] - 2026-06-18 12:51
+
+### Prompt
+> "로컬은 tika_dev 사용하고, 프로덕션은 Neon DB 사용하도록 분리해줄래?"
+> "로컬에 postgresql 실행시켜줘"
+
+### Changes
+- **Modified**: 환경별 DB 분리 — `NODE_ENV==='production'`이면 `POSTGRES_URL`(Neon), 그 외엔 `DATABASE_URL`(로컬 tika_dev). SSL은 호스트 기준(localhost off / 클라우드 require)으로 결정해 로컬 PG SSL 충돌(ECONNRESET) 해결 (`src/server/db/index.ts`)
+- **Modified**: 마이그레이션 설정도 동일하게 환경 분리 (`drizzle.config.js`)
+
+### Files Modified
+- `src/server/db/index.ts` (+12, -7 lines)
+- `drizzle.config.js` (+7, -3 lines)
+
+### Tests
+- npm test: 229 passed / 0 failed (DB는 테스트에서 mock — 무영향)
+- 실제 검증: 로컬 dev → tika_dev 연결 OK(GET /api/tickets 200, 티켓 2건), 프로덕션 선택 시 Neon
+
 ## [main] - 2026-06-18 10:10
 
 ### Prompt

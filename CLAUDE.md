@@ -123,6 +123,7 @@ src/shared/에서 타입과 검증 스키마를 공유한다.
 
 ## 최근 변경사항 (최근 14일)
 <!-- RECENT_CHANGES_START -->
+- **2026-06-18** [main] 환경별 DB 분리 — 로컬 tika_dev(DATABASE_URL)/프로덕션 Neon(POSTGRES_URL), 호스트 기준 SSL (2 files, +19/-10)
 - **2026-06-18** [main] DB 연결 POSTGRES_URL(Neon) 우선 + ssl require, 마이그레이션 설정 동기화 (Vercel/Neon 연동) (2 files, +10/-7)
 - **2026-06-17** [main] TicketDetailView 날짜(ISO 문자열) 포맷 버그 수정 + 홈 force-dynamic(Vercel 빌드 대응) (3 files, +28/-3)
 - **2026-06-17** [main] 디자인 토큰(colors.json)·스위밍레인 색/타이포·트렐로풍 보드·반응형·레이아웃 재구성 + TicketCard 접근성/성능(드래그 핸들·memo) + useTickets 재조회 왕복 제거·reconcile (17 files, +855/-349)
